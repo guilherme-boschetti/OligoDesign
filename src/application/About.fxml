@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.About">
+   <children>
+      <BorderPane AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0">
+         <left>
+            <HBox BorderPane.alignment="TOP_LEFT">
+               <children>
+                  <ImageView fx:id="imgOligoDesign" fitHeight="50.0" fitWidth="80.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../../res/iconOligoDesign.png" />
+                     </image>
+                  </ImageView>
+                  <Label text="OligoDesign">
+                     <font>
+                        <Font name="System Bold" size="18.0" />
+                     </font>
+                     <HBox.margin>
+                        <Insets left="14.0" top="12.0" />
+                     </HBox.margin>
+                  </Label>
+               </children>
+            </HBox>
+         </left>
+         <right>
+            <Label text="Versão 1.0" BorderPane.alignment="TOP_RIGHT" />
+         </right>
+         <bottom>
+            <Label text="Sobre" BorderPane.alignment="CENTER">
+               <font>
+                  <Font name="System Bold Italic" size="24.0" />
+               </font>
+            </Label>
+         </bottom>
+      </BorderPane>
+      <ScrollPane layoutX="14.0" layoutY="64.0" prefHeight="200.0" prefWidth="200.0" style="-fx-background: #ffffff;" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="114.0">
+         <content>
+            <Label maxWidth="739.0" text="OligoDesign é um software desenvolvido com o objetivo de auxiliar no desenho de oligonucleotídeos, utilizados na técnica de PCR (Reação em Cadeia da Polimerase, do inglês Polimerase Chain Reaction).&#10;&#10;Para isso este software faz o alinhamento e a comparação de várias sequências de DNA similares, e mostra as sequências alinhadas e suas diferenças.&#10;Assim é possível identificar as partes da sequência de DNA alvo que possuem mais diferenças em relação às outras sequências de DNA similares, e usar estas partes para desenhar os oligonucleotídeos.&#10;&#10;O OligoDesign faz uma análise da comparação das sequências e sugere os oligonucleotídeos que podem ser utilizados. Mas fica a critério do usuário escolher usá-los ou não.&#10;O usuário deste software pode analisar visualmente o alinhamento e as diferenças das sequências de DNA comparadas, e desenhar seus próprios oligonucleotídeos, se assim desejar." wrapText="true" />
+         </content>
+         <padding>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </padding>
+      </ScrollPane>
+   </children>
+</AnchorPane>

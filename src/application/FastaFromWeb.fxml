@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="400.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.FastaFromWeb">
+   <children>
+      <Label layoutX="14.0" layoutY="14.0" prefHeight="25.0" prefWidth="772.0" text="Informe aqui o nome da sequência alvo (principal)" AnchorPane.topAnchor="14.0">
+         <font>
+            <Font size="16.0" />
+         </font>
+      </Label>
+      <TextField fx:id="textTargetSeqName" layoutX="14.0" layoutY="39.0" prefHeight="25.0" prefWidth="772.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" />
+      <Label layoutX="14.0" layoutY="77.0" prefHeight="25.0" prefWidth="772.0" text="Informe aqui o nome da(s) sequência(s) alvo secundária(s), separadas por ; (ponto e vírgula)">
+         <font>
+            <Font size="16.0" />
+         </font>
+      </Label>
+      <TextArea fx:id="textSecondaryTargetSeqsNames" layoutX="14.0" layoutY="102.0" prefHeight="50.0" prefWidth="772.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" />
+      <Label layoutX="14.0" layoutY="166.0" prefHeight="25.0" prefWidth="772.0" text="Informe aqui o nome da(s) outra(s) sequência(s) similar(es) não-alvo, separadas por ; (ponto e vírgula)">
+         <font>
+            <Font size="16.0" />
+         </font>
+      </Label>
+      <TextArea fx:id="textOtherSeqsNames" layoutX="14.0" layoutY="191.0" prefHeight="50.0" prefWidth="772.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" />
+      <Button layoutX="486.0" layoutY="398.0" mnemonicParsing="false" onAction="#loadFastaFilesFromWeb" prefHeight="25.0" prefWidth="300.0" text="Carregar os arquivos FASTA do NCBI web" AnchorPane.bottomAnchor="14.0" AnchorPane.rightAnchor="14.0" />
+      <Button layoutX="14.0" layoutY="398.0" mnemonicParsing="false" onAction="#cancel" prefHeight="25.0" prefWidth="300.0" text="Cancelar" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" />
+      <Button fx:id="btnSelectDirectory" layoutX="610.0" layoutY="337.0" mnemonicParsing="false" onAction="#selectDirectory" prefHeight="25.0" prefWidth="300.0" text="Selecione o diretório para salvar" visible="false" AnchorPane.bottomAnchor="66.0" AnchorPane.rightAnchor="14.0" />
+      <CheckBox fx:id="chkSaveFiles" layoutX="14.0" layoutY="349.0" mnemonicParsing="false" onAction="#onCheckChange" text="Salvar os arquivos fasta da web" AnchorPane.bottomAnchor="70.0" AnchorPane.leftAnchor="14.0" />
+      <Label layoutX="14.0" layoutY="313.0" text="URL de download da sequência do NCBI (O nome da sequência informado aqui será usado como id na URL)&#10;https://www.ncbi.nlm.nih.gov/search/api/download-sequence/?db=nuccore&amp;id=NOME_DA_SEQUÊNCIA_AQUI" AnchorPane.bottomAnchor="112.0" AnchorPane.leftAnchor="14.0" />
+   </children>
+</AnchorPane>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>C:\Users\Guilherme\Desktop\Guilherme B\UCS\2021-2\TCC-II\lauch4j\tcc\OligoDesign.jar</jar>
+  <outfile>C:\Users\Guilherme\Desktop\Guilherme B\UCS\2021-2\TCC-II\lauch4j\OligoDesign.exe</outfile>
+  <errTitle></errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl>http://java.com/download</downloadUrl>
+  <supportUrl></supportUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <manifest></manifest>
+  <icon>C:\Users\Guilherme\Desktop\Guilherme B\UCS\2021-2\TCC-II\lauch4j\tcc\iconOligoDesign.ico</icon>
+  <singleInstance>
+    <mutexName>OligoDesigner</mutexName>
+    <windowTitle></windowTitle>
+  </singleInstance>
+  <jre>
+    <path></path>
+    <bundledJre64Bit>false</bundledJre64Bit>
+    <bundledJreAsFallback>false</bundledJreAsFallback>
+    <minVersion>1.8.0</minVersion>
+    <maxVersion></maxVersion>
+    <jdkPreference>preferJre</jdkPreference>
+    <runtimeBits>64/32</runtimeBits>
+    <initialHeapPercent>30</initialHeapPercent>
+    <maxHeapPercent>90</maxHeapPercent>
+    <opt>-XX:GCTimeRatio=1 -XX:MaxGCPauseMillis=1 -XX:G1HeapRegionSize=8m</opt>
+  </jre>
+</launch4jConfig>
