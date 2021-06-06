@@ -1456,21 +1456,17 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	 						diff_match_patch.Diff firstDiff = entryFirst.getValue().get(j);
 	 						for (int k=0; k<entry.getValue().size(); k++) {
 	 							diff_match_patch.Diff otherDiff = entry.getValue().get(k);
-	 							/*if ((Math.abs(firstDiff.diffStartPosition - otherDiff.diffStartPosition) <= oligoSize)
-	 		 		        			|| (Math.abs(firstDiff.diffEndPosition - otherDiff.diffEndPosition) <= oligoSize)
-	 		 		        			|| (Math.abs(firstDiff.diffStartPosition - otherDiff.diffEndPosition) <= oligoSize)
-	 		 		        			|| (Math.abs(firstDiff.diffEndPosition - otherDiff.diffStartPosition) <= oligoSize)) {*/
-	 								
+	 							
+	 							if ((otherDiff.diffStartPosition >= firstDiff.diffStartPosition && otherDiff.diffStartPosition - firstDiff.diffStartPosition <= oligoSize) ||
+	 									(otherDiff.diffStartPosition < firstDiff.diffStartPosition && otherDiff.diffEndPosition > firstDiff.diffEndPosition) ||
+	 									(firstDiff.diffStartPosition < otherDiff.diffEndPosition && firstDiff.diffStartPosition > otherDiff.diffStartPosition)) {
+	 		 		        		
 	 								//String diffFirst = "{ (First Seq) Seq Number 0,  Diff: (" + firstDiff.diffStartPosition + ", " + firstDiff.diffEndPosition + ") }; ";
 	 		 		        		//String diffOther = "{ (Other Seq) Seq Number " + i + ",  Diff: (" + otherDiff.diffStartPosition + ", " + otherDiff.diffEndPosition + ") }.";
 	 		 		        		//String diffsPositions = "{ " + diffFirst + diffOther + " }";
 	 		 		        		//result.append(diffsPositions);
 	 		 		        		//result.append("<br/>");
-	 							
-	 							if ((otherDiff.diffStartPosition > firstDiff.diffStartPosition && otherDiff.diffStartPosition - firstDiff.diffStartPosition <= oligoSize) ||
-	 									(otherDiff.diffStartPosition < firstDiff.diffStartPosition && otherDiff.diffEndPosition > firstDiff.diffEndPosition) ||
-	 									(firstDiff.diffStartPosition < otherDiff.diffEndPosition && firstDiff.diffStartPosition > otherDiff.diffStartPosition)) {
-	 		 		        		
+	 								
 	 		 		        		DiffDesignOligo diffDesignOligo = new DiffDesignOligo(i, firstDiff, otherDiff);
 	 		 		        		
 	 		 		        		if (!mapDiffsPositions.containsKey(firstDiff.diffStartPosition)) {
