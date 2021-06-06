@@ -1596,8 +1596,10 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 						int countSpaces = ((int)forwardPrimerRegion.chars().filter(ch -> ch == '-').count());
 						forwardPrimerRegion = forwardPrimerRegion.replaceAll("-", "");
 						String complement = targetSeqAligned.substring(forwardPrimerStartPos + oligoSize, forwardPrimerStartPos + oligoSize + countSpaces);
-						forwardPrimerRegion += complement;
-						forwardPrimerEndPos += countSpaces;
+						if (!complement.contains("-")) {
+							forwardPrimerRegion += complement;
+							forwardPrimerEndPos += countSpaces;
+						}
 					}
 					String probeRegion = "";
 					String reversePrimerRegion = "";
@@ -1617,8 +1619,10 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 							int countSpaces = ((int)probeRegion.chars().filter(ch -> ch == '-').count());
 							probeRegion = probeRegion.replaceAll("-", "");
 							String complement = targetSeqAligned.substring(probeStartPos + oligoSize, probeStartPos + oligoSize + countSpaces);
-							probeRegion += complement;
-							probeEndPos += countSpaces;
+							if (!complement.contains("-")) {
+								probeRegion += complement;
+								probeEndPos += countSpaces;
+							}
 						}
 						probeEndPosition += probeEndPos;
 					}
@@ -1631,8 +1635,10 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 							int countSpaces = ((int)reversePrimerRegion.chars().filter(ch -> ch == '-').count());
 							reversePrimerRegion = reversePrimerRegion.replaceAll("-", "");
 							String complement = targetSeqAligned.substring(reversePrimerStartPos + oligoSize, reversePrimerStartPos + oligoSize + countSpaces);
-							reversePrimerRegion += complement;
-							reversePrimerEndPos += countSpaces;
+							if (!complement.contains("-")) {
+								reversePrimerRegion += complement;
+								reversePrimerEndPos += countSpaces;
+							}
 						}
 						reversePrimerEndPosition += reversePrimerEndPos;
 					}
