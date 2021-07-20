@@ -33,7 +33,7 @@
             </HBox>
          </left>
          <right>
-            <Label text="Versão 1.1" BorderPane.alignment="TOP_RIGHT" />
+            <Label text="Versão 1.2" BorderPane.alignment="TOP_RIGHT" />
          </right>
          <bottom>
             <Label text="Sobre" BorderPane.alignment="CENTER">

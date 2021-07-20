@@ -40,23 +40,28 @@
                   </HBox>
                   <HBox>
                      <children>
+                        <CheckBox fx:id="chkCompareSecondaryTargets" mnemonicParsing="false" onAction="#onCheckChange" text="Considerar sequência(s) alvo secundária(s)">
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin>
+                        </CheckBox>
+                        <CheckBox fx:id="chkUseBiojava" mnemonicParsing="false" onAction="#onCheckChange" selected="true" text="Usar Biojava">
+                           <HBox.margin>
+                              <Insets left="15.0" />
+                           </HBox.margin>
+                        </CheckBox>
                         <RadioButton fx:id="radioPairwiseAlignment" mnemonicParsing="false" selected="true" text="Alinhamento em Pares">
                            <toggleGroup>
                               <ToggleGroup fx:id="groupAlignment" />
                            </toggleGroup>
                            <HBox.margin>
-                              <Insets left="50.0" />
+                              <Insets left="25.0" />
                            </HBox.margin>
                         </RadioButton>
                         <RadioButton fx:id="radioMultipleAlignment" mnemonicParsing="false" text="Alinhamento Múltiplo" toggleGroup="$groupAlignment">
                            <HBox.margin>
-                              <Insets left="125.0" />
+                              <Insets left="10.0" />
                            </HBox.margin></RadioButton>
-                        <CheckBox fx:id="chkCompareSecondaryTargets" mnemonicParsing="false" onAction="#onCheckChange" text="Considerar sequência(s) alvo secundária(s)">
-                           <HBox.margin>
-                              <Insets left="72.0" />
-                           </HBox.margin>
-                        </CheckBox>
                      </children>
                      <VBox.margin>
                         <Insets bottom="5.0" top="15.0" />

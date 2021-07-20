@@ -21,10 +21,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import application.utils.AlignUtil;
+import application.utils.NeedlemanWunsch;
+import application.utils.NeedlemanWunschUsingFile;
 import application.utils.diff_match_patch;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
@@ -43,6 +46,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -92,13 +97,15 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	@FXML
 	private ComboBox<OligoSize> cmbOligoSize;
 	@FXML
+    private CheckBox chkCompareSecondaryTargets;
+	@FXML
+    private CheckBox chkUseBiojava;
+	@FXML
     private ToggleGroup groupAlignment;
 	@FXML
     private RadioButton radioPairwiseAlignment;
     @FXML
     private RadioButton radioMultipleAlignment;
-    @FXML
-    private CheckBox chkCompareSecondaryTargets;
     @FXML
     private Label lblOligosRegions;
 	@FXML
@@ -148,6 +155,10 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	
 	private boolean compareSecondaryTargets;
 	
+	private boolean useBiojava;
+	private boolean showMessageBigSequence;
+	private boolean storeMatrixInFile;
+	
 	// ========== constants ========== ---------- ---------- ---------- ----------
 	
 	private static String HTML_STYLE = "<style> body { font-family: 'Courier New', monospace; white-space: nowrap; } </style>";
@@ -193,6 +204,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		contentInit.append(HTML_STYLE);
 		
 		decimalFormat = new DecimalFormat();
+		
+		useBiojava = true;
+	    chkUseBiojava.setSelected(true);
 		
 		setMenusIcons();
 		loadComboBoxOligoSize();
@@ -400,6 +414,27 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
     	alert.showAndWait();
     }
 	
+	private void showConfirmationAlignUsingFile() {
+		// https://code.makery.ch/blog/javafx-dialogs-official/
+		Alert alert = new Alert(AlertType.CONFIRMATION);
+		alert.setTitle("Informação!");
+		alert.setHeaderText("Sequências muito grandes");
+		alert.setContentText("As sequências selecionadas são muito grandes para fazer o alinhamento em memória.\nDeseja fazer o alinhamento em disco?\n(OBS: O processamento em disco é extremamente demorado.)");
+
+		ButtonType buttonTypeYes = new ButtonType("Sim", ButtonData.YES);
+		ButtonType buttonTypeNo = new ButtonType("Não", ButtonData.NO);
+		
+		alert.getButtonTypes().setAll(buttonTypeYes, buttonTypeNo);
+		
+		Optional<ButtonType> result = alert.showAndWait();
+		if (result.get() == buttonTypeYes){
+			storeMatrixInFile = true;
+			align();
+		} else { // if (result.get() == buttonTypeNo){
+			clearAndRestart(null);
+		}
+	}
+	
 	// ========== screen menus events ========== ---------- ---------- ---------- ----------
 	
 	@FXML
@@ -491,14 +526,21 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
     
     @FXML
     void onCheckChange(ActionEvent event) {
-    	compareSecondaryTargets = chkCompareSecondaryTargets.isSelected();
-    	
-    	/*if (event.getSource() instanceof CheckBox) {
+    	if (event.getSource() instanceof CheckBox) {
             CheckBox chk = (CheckBox) event.getSource();
-            if ("checkbox".equals(chk.getText())) {
-            	System.out.println("É o checkbox selecionado.");
+            if ("Considerar sequência(s) alvo secundária(s)".equals(chk.getText())) {
+            	compareSecondaryTargets = chkCompareSecondaryTargets.isSelected();
+            } else if ("Usar Biojava".equals(chk.getText())) {
+            	useBiojava = chkUseBiojava.isSelected();
+            	if (useBiojava) {
+            		radioPairwiseAlignment.setDisable(false);
+            	    radioMultipleAlignment.setDisable(false);
+            	} else {
+            		radioPairwiseAlignment.setDisable(true);
+            	    radioMultipleAlignment.setDisable(true);
+            	}
             }
-        }*/
+        }
     }
     
     /*chkCompareSecondaryTargets.selectedProperty().addListener(new ChangeListener<Boolean>() {
@@ -546,6 +588,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		radioPairwiseAlignment.setDisable(true);
 	    radioMultipleAlignment.setDisable(true);
 	    chkCompareSecondaryTargets.setDisable(true);
+	    chkUseBiojava.setDisable(true);
 	}
 	
     @FXML
@@ -563,6 +606,10 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		mapDiffs = null;
 		contentInit = null;
 		messageToDisplayInLblOligosRegions = null;
+		compareSecondaryTargets = false;
+		useBiojava = true;
+		showMessageBigSequence = false;
+		storeMatrixInFile = false;
 		oligoSize = 20;
 		
 		btnTarget.setDisable(false);
@@ -574,9 +621,11 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		radioPairwiseAlignment.setDisable(false);
 	    radioMultipleAlignment.setDisable(false);
 	    chkCompareSecondaryTargets.setDisable(false);
+	    chkUseBiojava.setDisable(false);
 	    
 	    radioPairwiseAlignment.setSelected(true);
 	    chkCompareSecondaryTargets.setSelected(false);
+	    chkUseBiojava.setSelected(true);
 	    lblOligosRegions.setText("");
 		
 		wvInit.getEngine().loadContent("");
@@ -813,41 +862,92 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				// Inicia a marcar o tempo
 				long startTime = System.currentTimeMillis();
 				
-				if (radioPairwiseAlignment.isSelected()) {
-					
-					for (String seq : listSequences) {
-						String[] alignResult = AlignUtil.pairwiseAlignment(targetSequence, seq);
-						String targetSeq = alignResult[0];
-						String anotherSeq = alignResult[1];
-						lstTargetSeqAlign.add(targetSeq);
-						lstAnotherSeqsAlign.add(anotherSeq);
-			        }
-					
-					if (listSecondaryTargetSequences != null) {
-						for (String seq : listSecondaryTargetSequences) {
+				if (useBiojava) {
+					if (radioPairwiseAlignment.isSelected()) {
+						
+						for (String seq : listSequences) {
 							String[] alignResult = AlignUtil.pairwiseAlignment(targetSequence, seq);
 							String targetSeq = alignResult[0];
 							String anotherSeq = alignResult[1];
-							lstTargetSeqAlignSecondary.add(targetSeq);
-							lstAnotherSeqsAlignSecondary.add(anotherSeq);
+							lstTargetSeqAlign.add(targetSeq);
+							lstAnotherSeqsAlign.add(anotherSeq);
 				        }
+						
+						if (listSecondaryTargetSequences != null) {
+							for (String seq : listSecondaryTargetSequences) {
+								String[] alignResult = AlignUtil.pairwiseAlignment(targetSequence, seq);
+								String targetSeq = alignResult[0];
+								String anotherSeq = alignResult[1];
+								lstTargetSeqAlignSecondary.add(targetSeq);
+								lstAnotherSeqsAlignSecondary.add(anotherSeq);
+					        }
+						}
+						
+					} else {
+						
+						List<String> listToAlign = new LinkedList<>();
+						listToAlign.add(targetSequence);
+						if (listSecondaryTargetSequences != null) {
+							listToAlign.addAll(listSecondaryTargetSequences);
+						}
+						listToAlign.addAll(listSequences);
+						
+						List<String> seqsAligned = AlignUtil.multipleAlignment(listToAlign);
+						lstTargetSeqAlign.add(seqsAligned.get(0));
+						for (String seq : seqsAligned) {
+							lstMultipleSeqsAlign.add(seq);
+						}
+						
 					}
-					
 				} else {
 					
-					List<String> listToAlign = new LinkedList<>();
-					listToAlign.add(targetSequence);
-					if (listSecondaryTargetSequences != null) {
-						listToAlign.addAll(listSecondaryTargetSequences);
-					}
-					listToAlign.addAll(listSequences);
+					for (String seq : listSequences) {
+						String[] alignResult = null;
+						try {
+							System.gc(); // Runs the garbage collector.
+							NeedlemanWunsch alignNW = new NeedlemanWunsch(targetSequence, seq);
+							alignResult = alignNW.getAlignedStrands();
+						} catch (OutOfMemoryError error) {
+							System.gc(); // Runs the garbage collector.
+							if (storeMatrixInFile) {
+								NeedlemanWunschUsingFile alignNWfile = new NeedlemanWunschUsingFile(targetSequence, seq);
+								alignResult = alignNWfile.getAlignedStrands();
+							} else {
+								showMessageBigSequence = true;
+							}
+						}
+						if (alignResult != null) {
+							String targetSeq = alignResult[0];
+							String anotherSeq = alignResult[1];
+							lstTargetSeqAlign.add(targetSeq);
+							lstAnotherSeqsAlign.add(anotherSeq);
+						}
+			        }
 					
-					List<String> seqsAligned = AlignUtil.multipleAlignment(listToAlign);
-					lstTargetSeqAlign.add(seqsAligned.get(0));
-					for (String seq : seqsAligned) {
-						lstMultipleSeqsAlign.add(seq);
+					if (listSecondaryTargetSequences != null && !showMessageBigSequence) {
+						for (String seq : listSecondaryTargetSequences) {
+							String[] alignResult = null;
+							try {
+								System.gc(); // Runs the garbage collector.
+								NeedlemanWunsch alignNW = new NeedlemanWunsch(targetSequence, seq);
+								alignResult = alignNW.getAlignedStrands();
+							} catch (OutOfMemoryError error) {
+								System.gc(); // Runs the garbage collector.
+								if (storeMatrixInFile) {
+									NeedlemanWunschUsingFile alignNWfile = new NeedlemanWunschUsingFile(targetSequence, seq);
+									alignResult = alignNWfile.getAlignedStrands();
+								} else {
+									showMessageBigSequence = true;
+								}
+							}
+							if (alignResult != null) {
+								String targetSeq = alignResult[0];
+								String anotherSeq = alignResult[1];
+								lstTargetSeqAlignSecondary.add(targetSeq);
+								lstAnotherSeqsAlignSecondary.add(anotherSeq);
+							}
+				        }
 					}
-					
 				}
 				
 				// Finaliza de marcar o tempo e calcula o tempo decorrido
@@ -861,10 +961,15 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			@Override
 			protected void succeeded() {
 				progressInit.setVisible(false);
-				contentInit.append("Sequências alinhadas. (" + decimalFormat.format(getValue()) + "s)");
-				contentInit.append("<br/>-<br/>");
-				showContentInit();
-				compareAlign();
+				if (showMessageBigSequence) {
+					showConfirmationAlignUsingFile();
+					showMessageBigSequence = false;
+				} else {
+					contentInit.append("Sequências alinhadas. (" + decimalFormat.format(getValue()) + "s)");
+					contentInit.append("<br/>-<br/>");
+					showContentInit();
+					compareAlign();
+				}
 			}
 
 			@Override
@@ -1114,6 +1219,10 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
     
     // ========== Alinhar o inicio das sequencias alinhadas em pares ========== ---------- ---------- ---------- ----------
     
+    private int sizeSubstring(int totalSize) {
+    	return ((oligoSize * 3) < (totalSize / 2)) ? (oligoSize * 3) : oligoSize;
+    }
+    
     private void alignInitOfSequencesPairwiseAligned() {
     	int biggestSizeSeq = 0;
 		int smallestSizeSeq = lstTargetSeqAlign.get(0).length();
@@ -1126,7 +1235,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			if (targetSeqAligned.length() < smallestSizeSeq) {
 				smallestSizeSeq = targetSeqAligned.length();
 			}
-			arrayAux[i] = ((int)targetSeqAligned.substring(0, oligoSize).chars().filter(ch -> ch == '-').count());
+			arrayAux[i] = ((int)targetSeqAligned.substring(0, sizeSubstring(targetSeqAligned.length())).chars().filter(ch -> ch == '-').count());
 		}
 		int[] arrayAuxSecondary = new int[lstTargetSeqAlignSecondary != null ? lstTargetSeqAlignSecondary.size() : 0];
 		if (listSecondaryTargetSequences != null) {
@@ -1138,7 +1247,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				if (targetSeqAligned.length() < smallestSizeSeq) {
 					smallestSizeSeq = targetSeqAligned.length();
 				}
-				arrayAuxSecondary[i] = ((int)targetSeqAligned.substring(0, oligoSize).chars().filter(ch -> ch == '-').count());
+				arrayAuxSecondary[i] = ((int)targetSeqAligned.substring(0, sizeSubstring(targetSeqAligned.length())).chars().filter(ch -> ch == '-').count());
 			}
 		}
 		int maxSpaces = (biggestSizeSeq - smallestSizeSeq);
@@ -1148,17 +1257,17 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			int countAux = arrayAux[i];
 			int spacesToAdd = maxSpaces - countAux;
 			if (spacesToAdd > 0) {
-			for (int j=0; j<spacesToAdd; j++) {
-				aux.append("-");
-			}
-			targetSeqAligned = aux.toString() + targetSeqAligned;
-			lstTargetSeqAlign.remove(i);
-			lstTargetSeqAlign.add(i, targetSeqAligned);
-			
-			String anotherSeqAligned = lstAnotherSeqsAlign.get(i);
-			anotherSeqAligned = aux.toString() + anotherSeqAligned;
-			lstAnotherSeqsAlign.remove(i);
-			lstAnotherSeqsAlign.add(i, anotherSeqAligned);
+				for (int j=0; j<spacesToAdd; j++) {
+					aux.append("-");
+				}
+				targetSeqAligned = aux.toString() + targetSeqAligned;
+				lstTargetSeqAlign.remove(i);
+				lstTargetSeqAlign.add(i, targetSeqAligned);
+				
+				String anotherSeqAligned = lstAnotherSeqsAlign.get(i);
+				anotherSeqAligned = aux.toString() + anotherSeqAligned;
+				lstAnotherSeqsAlign.remove(i);
+				lstAnotherSeqsAlign.add(i, anotherSeqAligned);
 			}
 		}
 		if (listSecondaryTargetSequences != null) {
@@ -1168,17 +1277,17 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				int countAux = arrayAuxSecondary[i];
 				int spacesToAdd = maxSpaces - countAux;
 				if (spacesToAdd > 0) {
-				for (int j=0; j<spacesToAdd; j++) {
-					aux.append("-");
-				}
-				targetSeqAligned = aux.toString() + targetSeqAligned;
-				lstTargetSeqAlignSecondary.remove(i);
-				lstTargetSeqAlignSecondary.add(i, targetSeqAligned);
-				
-				String anotherSeqAligned = lstAnotherSeqsAlignSecondary.get(i);
-				anotherSeqAligned = aux.toString() + anotherSeqAligned;
-				lstAnotherSeqsAlignSecondary.remove(i);
-				lstAnotherSeqsAlignSecondary.add(i, anotherSeqAligned);
+					for (int j=0; j<spacesToAdd; j++) {
+						aux.append("-");
+					}
+					targetSeqAligned = aux.toString() + targetSeqAligned;
+					lstTargetSeqAlignSecondary.remove(i);
+					lstTargetSeqAlignSecondary.add(i, targetSeqAligned);
+					
+					String anotherSeqAligned = lstAnotherSeqsAlignSecondary.get(i);
+					anotherSeqAligned = aux.toString() + anotherSeqAligned;
+					lstAnotherSeqsAlignSecondary.remove(i);
+					lstAnotherSeqsAlignSecondary.add(i, anotherSeqAligned);
 				}
 			}
 		}
@@ -1963,7 +2072,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		}
    	}
    	
-   	private void writeFile(String directory, String fileName, List<String> lines) {;
+   	private void writeFile(String directory, String fileName, List<String> lines) {
    		FileWriter fw = null;
    		BufferedWriter bw = null;
    		try {
