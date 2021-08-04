@@ -255,8 +255,8 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	}
 	
 	private void setComboBoxOligoSizeDefaultOption() {
-		int index = 5;
-		cmbOligoSize.getSelectionModel().select(index);
+		int indexOligoSize = 5;
+		cmbOligoSize.getSelectionModel().select(indexOligoSize);
 		//cmbOligoSize.setValue(new OligoSize(oligoSize, oligoSize + " nucleotídeos"));
 	}
 	
@@ -640,7 +640,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
         lstAnotherSeqsAlign = new LinkedList<>();
 		index++;
 		for (List<String> lstPartsSeq : lstPartsSeqs) {
-			lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+			if (index < lstPartsSeq.size()) {
+				lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+			}
 		}
 		lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
 		btnStartProcess.setDisable(false);
@@ -697,6 +699,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		showMessageBigSequence = false;
 		storeMatrixInFile = false;
 		oligoSize = 20;
+		index = 0;
 		
 		btnTarget.setDisable(false);
 		btnTargetsSecondary.setDisable(false);
@@ -780,7 +783,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				listDescriptions.add(line); // A primeira linha do arquivo fasta não faz parte da sequência, é uma descrição
 				if (listDescriptions.size() >= 2) {
 					lstPartsSeqs.add(lstPartsSeq);
-					lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+					if (index < lstPartsSeq.size()) {
+						lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+					}
 					lstPartsSeq = new LinkedList<>();
 				}
 				stringBuilder = new StringBuilder();
@@ -803,7 +808,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			line = br.readLine(); // read next line
 		}
 		lstPartsSeqs.add(lstPartsSeq);
-		lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+		if (index < lstPartsSeq.size()) {
+			lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+		}
 		lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
 		fr.close();
 		br.close();
