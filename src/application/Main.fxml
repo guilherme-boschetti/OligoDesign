@@ -14,6 +14,7 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -40,35 +41,6 @@
                   </HBox>
                   <HBox>
                      <children>
-                        <CheckBox fx:id="chkCompareSecondaryTargets" mnemonicParsing="false" onAction="#onCheckChange" text="Considerar sequência(s) alvo secundária(s)">
-                           <HBox.margin>
-                              <Insets />
-                           </HBox.margin>
-                        </CheckBox>
-                        <CheckBox fx:id="chkUseBiojava" mnemonicParsing="false" onAction="#onCheckChange" selected="true" text="Usar Biojava">
-                           <HBox.margin>
-                              <Insets left="15.0" />
-                           </HBox.margin>
-                        </CheckBox>
-                        <RadioButton fx:id="radioPairwiseAlignment" mnemonicParsing="false" selected="true" text="Alinhamento em Pares">
-                           <toggleGroup>
-                              <ToggleGroup fx:id="groupAlignment" />
-                           </toggleGroup>
-                           <HBox.margin>
-                              <Insets left="25.0" />
-                           </HBox.margin>
-                        </RadioButton>
-                        <RadioButton fx:id="radioMultipleAlignment" mnemonicParsing="false" text="Alinhamento Múltiplo" toggleGroup="$groupAlignment">
-                           <HBox.margin>
-                              <Insets left="10.0" />
-                           </HBox.margin></RadioButton>
-                     </children>
-                     <VBox.margin>
-                        <Insets bottom="5.0" top="15.0" />
-                     </VBox.margin>
-                  </HBox>
-                  <HBox>
-                     <children>
                         <VBox prefWidth="255.0">
                            <children>
                               <Label text="Tamanho dos Oligonucleotídeos" />
@@ -78,19 +50,85 @@
                         <VBox prefWidth="255.0">
                            <children>
                               <Label />
-                              <Button fx:id="btnStartProcess" disable="true" mnemonicParsing="false" onAction="#startProcess" prefWidth="255.0" text="Iniciar Processamento" />
+                              <CheckBox fx:id="chkCompareSecondaryTargets" mnemonicParsing="false" onAction="#onCheckChange" text="Considerar sequência(s) alvo secundária(s)">
+                                 <VBox.margin>
+                                    <Insets top="3.0" />
+                                 </VBox.margin>
+                              </CheckBox>
                            </children>
                            <HBox.margin>
                               <Insets left="5.0" right="5.0" />
                            </HBox.margin>
                         </VBox>
-                        <VBox prefWidth="255.0">
+                        <VBox layoutX="270.0" layoutY="10.0">
+                           <children>
+                              <Label text="Linhas" />
+                              <TextField fx:id="txtLines" disable="true" editable="false" maxWidth="100.0" prefWidth="100.0" promptText="Linhas" text="100" />
+                           </children>
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin>
+                        </VBox>
+                        <VBox layoutX="530.0" layoutY="10.0">
                            <children>
                               <Label />
-                              <Button fx:id="btnClearAndRestart" disable="true" mnemonicParsing="false" onAction="#clearAndRestart" prefWidth="255.0" text="Limpar e Reiniciar" />
+                              <Button fx:id="btnNextPart" disable="true" maxWidth="100.0" mnemonicParsing="false" onAction="#nextPart" prefWidth="100.0" text="Próximo   &gt;&gt;">
+                                 <VBox.margin>
+                                    <Insets />
+                                 </VBox.margin>
+                              </Button>
                            </children>
+                           <HBox.margin>
+                              <Insets left="55.0" />
+                           </HBox.margin>
                         </VBox>
                      </children>
+                     <VBox.margin>
+                        <Insets top="5.0" />
+                     </VBox.margin>
+                  </HBox>
+                  <HBox>
+                     <children>
+                        <CheckBox fx:id="chkDoAlignment" mnemonicParsing="false" onAction="#onCheckChange" selected="true" text="Fazer Alinhamento">
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin>
+                        </CheckBox>
+                        <CheckBox fx:id="chkUseBiojava" mnemonicParsing="false" onAction="#onCheckChange" selected="true" text="Usar Biojava">
+                           <HBox.margin>
+                              <Insets left="140.0" />
+                           </HBox.margin>
+                        </CheckBox>
+                        <RadioButton fx:id="radioPairwiseAlignment" mnemonicParsing="false" selected="true" text="Alinhamento em Pares">
+                           <toggleGroup>
+                              <ToggleGroup fx:id="groupAlignment" />
+                           </toggleGroup>
+                           <HBox.margin>
+                              <Insets left="140.0" />
+                           </HBox.margin>
+                        </RadioButton>
+                        <RadioButton fx:id="radioMultipleAlignment" mnemonicParsing="false" text="Alinhamento Múltiplo" toggleGroup="$groupAlignment">
+                           <HBox.margin>
+                              <Insets left="10.0" />
+                           </HBox.margin></RadioButton>
+                     </children>
+                     <VBox.margin>
+                        <Insets top="10.0" />
+                     </VBox.margin>
+                  </HBox>
+                  <HBox layoutX="10.0" layoutY="72.0">
+                     <children>
+                        <Button fx:id="btnLoadSequencesAligned" disable="true" mnemonicParsing="false" onAction="#loadSequencesAligned" prefWidth="255.0" text="Carregar Sequências Alinhadas" />
+                        <Button fx:id="btnStartProcess" disable="true" mnemonicParsing="false" onAction="#startProcess" prefWidth="255.0" text="Iniciar Processamento">
+                           <HBox.margin>
+                              <Insets left="5.0" right="5.0" />
+                           </HBox.margin>
+                        </Button>
+                        <Button fx:id="btnClearAndRestart" disable="true" mnemonicParsing="false" onAction="#clearAndRestart" prefWidth="255.0" text="Limpar e Reiniciar" />
+                     </children>
+                     <VBox.margin>
+                        <Insets top="10.0" />
+                     </VBox.margin>
                   </HBox>
                </children>
                <BorderPane.margin>
@@ -134,7 +172,10 @@
                <content>
                   <StackPane prefHeight="200.0" prefWidth="200.0">
                      <children>
-                        <WebView fx:id="wvInit" prefHeight="200.0" prefWidth="200.0" />
+                        <WebView fx:id="wvInit" prefHeight="200.0" prefWidth="200.0">
+                           <StackPane.margin>
+                              <Insets />
+                           </StackPane.margin></WebView>
                         <ProgressIndicator fx:id="progressInit" maxHeight="50.0" maxWidth="50.0" minHeight="50.0" minWidth="50.0" prefHeight="50.0" prefWidth="50.0" progress="-1.0" visible="false" />
                      </children>
                   </StackPane>

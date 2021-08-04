@@ -57,6 +57,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -91,13 +92,21 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	@FXML
 	private Button btnQuery;
 	@FXML
+	private Button btnLoadSequencesAligned;
+	@FXML
+	private Button btnNextPart;
+	@FXML
 	private Button btnStartProcess;
 	@FXML
 	private Button btnClearAndRestart;
 	@FXML
+	private TextField txtLines;
+	@FXML
 	private ComboBox<OligoSize> cmbOligoSize;
 	@FXML
     private CheckBox chkCompareSecondaryTargets;
+	@FXML
+    private CheckBox chkDoAlignment;
 	@FXML
     private CheckBox chkUseBiojava;
 	@FXML
@@ -155,6 +164,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	
 	private boolean compareSecondaryTargets;
 	
+	private boolean doAlignment;
 	private boolean useBiojava;
 	private boolean showMessageBigSequence;
 	private boolean storeMatrixInFile;
@@ -205,6 +215,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		
 		decimalFormat = new DecimalFormat();
 		
+		doAlignment = true;
+		
+		chkDoAlignment.setSelected(true);
 		useBiojava = true;
 	    chkUseBiojava.setSelected(true);
 		
@@ -212,6 +225,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		loadComboBoxOligoSize();
 		enableOnlyFirstTab();
 		bindWebViewsScrollBarValues();
+		setTextFieldListener();
 	}
 	
 	private void setMenusIcons() {
@@ -349,6 +363,18 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	    }
 	    return null;
 	}*/
+	
+	private void setTextFieldListener() {
+		// force the field to be numeric only
+		txtLines.textProperty().addListener(new ChangeListener<String>() {
+		    @Override
+		    public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+		        if (!newValue.matches("\\d*")) {
+		        	txtLines.setText(newValue.replaceAll("[^\\d]", ""));
+		        }
+		    }
+		});
+	}
 	
 	private void showContentInit() {
 		wvInit.getEngine().loadContent(contentInit.toString());
@@ -539,6 +565,29 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
             		radioPairwiseAlignment.setDisable(true);
             	    radioMultipleAlignment.setDisable(true);
             	}
+            } else if ("Fazer Alinhamento".equals(chk.getText())) {
+            	doAlignment = chkDoAlignment.isSelected();
+            	if (doAlignment) {
+            		chkUseBiojava.setDisable(false);
+            		radioPairwiseAlignment.setDisable(false);
+            	    radioMultipleAlignment.setDisable(false);
+            	    btnTarget.setDisable(false);
+            		btnTargetsSecondary.setDisable(false);
+            	    btnLoadSequencesAligned.setDisable(true);
+            	    txtLines.setDisable(true);
+            	    txtLines.setEditable(false);
+            	    btnNextPart.setDisable(true);
+            	} else {
+            		chkUseBiojava.setDisable(true);
+            		radioPairwiseAlignment.setDisable(true);
+            	    radioMultipleAlignment.setDisable(true);
+            	    btnTarget.setDisable(true);
+            		btnTargetsSecondary.setDisable(true);
+            	    btnLoadSequencesAligned.setDisable(false);
+            	    txtLines.setDisable(false);
+            	    txtLines.setEditable(true);
+            	    btnNextPart.setDisable(true);
+            	}
             }
         }
     }
@@ -554,7 +603,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	
     @FXML
 	public void loadTargetFile(ActionEvent event) {
-		FileChooser fileChooser = new FileChooser();
+    	FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Selecione a sequência alvo (principal)");
         File file = fileChooser.showOpenDialog(stage);
         readTargetFile(file);
@@ -575,13 +624,48 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
         List<File> files = fileChooser.showOpenMultipleDialog(stage);
         readQueryFiles(files);
 	}
+    
+    @FXML
+	public void loadSequencesAligned(ActionEvent event) {
+    	FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Selecione o arquivo com todas as sequências");
+        File file = fileChooser.showOpenDialog(stage);
+        readAllSequencesFiles(file);
+    }
+    
+    @FXML
+	public void nextPart(ActionEvent event) {
+    	lstMultipleSeqsAlign = new LinkedList<>();
+        lstTargetSeqAlign = new LinkedList<>();
+        lstAnotherSeqsAlign = new LinkedList<>();
+		index++;
+		for (List<String> lstPartsSeq : lstPartsSeqs) {
+			lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+		}
+		lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
+		btnStartProcess.setDisable(false);
+		
+		contentInit = new StringBuilder();
+		wvInit.getEngine().loadContent("");
+		wvSeqNames.getEngine().loadContent("");
+		wvAlignmentComparation.getEngine().loadContent("");
+		wvResult.getEngine().loadContent("");
+    }
 	
     @FXML
 	public void startProcess(ActionEvent event) {
-		align();
+    	if (doAlignment) {
+    		align();
+    	} else {
+    		compareAlign();
+    	}
 		btnTarget.setDisable(true);
 		btnTargetsSecondary.setDisable(true);
 		btnQuery.setDisable(true);
+		btnLoadSequencesAligned.setDisable(true);
+		txtLines.setDisable(true);
+		txtLines.setEditable(false);
+		btnNextPart.setDisable(true);
 		btnStartProcess.setDisable(true);
 		btnClearAndRestart.setDisable(true);
 		cmbOligoSize.setDisable(true);
@@ -589,6 +673,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	    radioMultipleAlignment.setDisable(true);
 	    chkCompareSecondaryTargets.setDisable(true);
 	    chkUseBiojava.setDisable(true);
+	    chkDoAlignment.setDisable(true);
 	}
 	
     @FXML
@@ -607,6 +692,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		contentInit = null;
 		messageToDisplayInLblOligosRegions = null;
 		compareSecondaryTargets = false;
+		doAlignment = true;
 		useBiojava = true;
 		showMessageBigSequence = false;
 		storeMatrixInFile = false;
@@ -615,6 +701,11 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		btnTarget.setDisable(false);
 		btnTargetsSecondary.setDisable(false);
 		btnQuery.setDisable(true);
+		btnLoadSequencesAligned.setDisable(true);
+		txtLines.setDisable(true);
+		txtLines.setEditable(false);
+		txtLines.setText("100");
+		btnNextPart.setDisable(true);
 		btnStartProcess.setDisable(true);
 		btnClearAndRestart.setDisable(true);
 		cmbOligoSize.setDisable(false);
@@ -622,7 +713,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	    radioMultipleAlignment.setDisable(false);
 	    chkCompareSecondaryTargets.setDisable(false);
 	    chkUseBiojava.setDisable(false);
+	    chkDoAlignment.setDisable(false);
 	    
+	    chkDoAlignment.setSelected(true);
 	    radioPairwiseAlignment.setSelected(true);
 	    chkCompareSecondaryTargets.setSelected(false);
 	    chkUseBiojava.setSelected(true);
@@ -667,6 +760,54 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		br.close();
 		return stringBuilder.toString();
     }
+	
+	private List<List<String>> lstPartsSeqs = new LinkedList<>();
+	private int index = 0;
+	
+	private void readSequencesFile(File file) throws IOException {
+		StringBuilder stringBuilder = null;
+    	FileReader fr = new FileReader(file);
+    	BufferedReader br = new BufferedReader(fr);
+        String line = br.readLine(); // read first line
+        lstMultipleSeqsAlign = new LinkedList<>();
+        lstTargetSeqAlign = new LinkedList<>();
+        lstAnotherSeqsAlign = new LinkedList<>();
+        int count = 0;
+        List<String> lstPartsSeq = new LinkedList<>();
+		while (line != null) {
+			if (line.startsWith(">")) {
+				count = 0;
+				listDescriptions.add(line); // A primeira linha do arquivo fasta não faz parte da sequência, é uma descrição
+				if (listDescriptions.size() >= 2) {
+					lstPartsSeqs.add(lstPartsSeq);
+					lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+					lstPartsSeq = new LinkedList<>();
+				}
+				stringBuilder = new StringBuilder();
+			} else {
+				count++;
+				stringBuilder.append(line);
+			}
+			String linesStr = txtLines.getText();
+			int lines = 100;
+			try {
+				lines = Integer.parseInt(linesStr);
+			} catch (Exception e) {
+				// do nothing
+			}
+			if (count > lines) {
+				count = 0;
+				lstPartsSeq.add(stringBuilder.toString());
+				stringBuilder = new StringBuilder();
+			}
+			line = br.readLine(); // read next line
+		}
+		lstPartsSeqs.add(lstPartsSeq);
+		lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
+		lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
+		fr.close();
+		br.close();
+	}
 	
 	private void readTargetFile(File file) {
 		if (file != null) {
@@ -837,6 +978,62 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
         }
     }
 	
+	private void readAllSequencesFiles(File file) {
+		if (file != null) {
+			contentInit.append("Carregando sequências ...");
+			contentInit.append("<br/>-<br/>");
+			showContentInit();
+			progressInit.setVisible(true);
+			
+			// https://winterbe.com/posts/2015/04/07/java8-concurrency-tutorial-thread-executor-examples/
+			// https://docs.oracle.com/javafx/2/threads/jfxpub-threads.htm
+			Task<Double> task = new Task<Double>() {
+				@Override
+				protected Double call() throws Exception {
+					// Inicia a marcar o tempo
+					long startTime = System.currentTimeMillis();
+					
+					readSequencesFile(file);
+					
+					// Finaliza de marcar o tempo e calcula o tempo decorrido
+					long endTime = System.currentTimeMillis();
+					long elapsedTime = endTime - startTime;
+					double elapsedTimeInSeconds = elapsedTime / 1000.0;
+					
+					return elapsedTimeInSeconds;
+				}
+
+				@Override
+				protected void succeeded() {
+					btnStartProcess.setDisable(false);
+		        	progressInit.setVisible(false);
+		        	contentInit.append("Sequências carregadas. (" + decimalFormat.format(getValue()) + "s)");
+					contentInit.append("<br/>-<br/>");
+					showContentInit();
+				}
+
+				@Override
+				protected void failed() {
+					progressInit.setVisible(false);
+		        	contentInit.append("Falha ao carregar as sequências.");
+		        	if (getException() != null && getException().getMessage() != null) {
+		        		contentInit.append("<br/>");
+		        		contentInit.append(getException().getMessage());
+		        	}
+		        	getException().printStackTrace();
+					contentInit.append("<br/>-<br/>");
+					showContentInit();
+					if (getException() != null && getException() instanceof IOException) {
+						showAlertReadFileError();
+				    }
+				}
+			};
+			Thread t = new Thread(task);
+			t.setDaemon(true);
+			t.start();
+        }
+	}
+	
 	// ========== Alinhar Sequencias ========== ---------- ---------- ---------- ----------
 	
 	private void align() {
@@ -1002,7 +1199,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
     	StringBuilder comparationsAlign = new StringBuilder();
 		comparationsAlign.append(HTML_STYLE);
 		
-    	if (radioPairwiseAlignment.isSelected()) {
+    	if (radioPairwiseAlignment.isSelected() && doAlignment) {
 	 		if (lstTargetSeqAlign != null && !lstTargetSeqAlign.isEmpty() 
 	 				&& lstAnotherSeqsAlign != null && !lstAnotherSeqsAlign.isEmpty()) {
 	 			
@@ -1154,9 +1351,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			    		}
 			    		
 			    		if (comparationsAlignSecondary != null) {
-			 				comparationsAlign.append(comparationsAlignSecondary.toString());
+			    			comparationsAlign.append(comparationsAlignSecondary.toString());
 			 			}
-			 			comparationsAlign.append(comparationsAlignAnother.toString());
+			    		comparationsAlign.append(comparationsAlignAnother.toString());
 			    		comparationsAlign.append("<br/>-<br/>");
 			    		
 			    		// Finaliza de marcar o tempo e calcula o tempo decorrido
@@ -1619,7 +1816,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			// == Primeiro pega da map apenas as diferenças que interessam, pois só interessam as diferenças presentes em uma mesma região que possui diferença em todas as sequencias não alvo
 			Map<Integer, DesignOligo> mapDiffsPositionsValid = new HashMap<>();
 			for (Entry<Integer, DesignOligo> entry : mapDiffsPositions.entrySet()) {
-				int qtySequences = compareSecondaryTargets && listSecondaryTargetSequences != null ? listSequences.size() + listSecondaryTargetSequences.size() : listSequences.size();
+				int qtySequences = compareSecondaryTargets && listSecondaryTargetSequences != null ? listSequences.size() + listSecondaryTargetSequences.size() : listSequences != null ? listSequences.size() : lstMultipleSeqsAlign.size();
 				if (entry.getValue().getMapDiffDesignOligo().size() == qtySequences-1) {
 					mapDiffsPositionsValid.put(entry.getKey(), entry.getValue());
 				}
@@ -1914,6 +2111,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
    	private void finishProcess() {
    		enableAllTabs();
 		btnClearAndRestart.setDisable(false);
+		if (!doAlignment) {
+			btnNextPart.setDisable(false);
+		}
 		showAlertProcessFinished();
    	}
 	
@@ -1929,6 +2129,10 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
    		btnTarget.setDisable(true);
    		btnTargetsSecondary.setDisable(true);
    		btnQuery.setDisable(true);
+   		btnLoadSequencesAligned.setDisable(true);
+   		txtLines.setDisable(true);
+   		txtLines.setEditable(false);
+   		btnNextPart.setDisable(true);
    		btnStartProcess.setDisable(true);
    		btnClearAndRestart.setDisable(true);
    		contentInit.append("Buscando sequências na web ...");
