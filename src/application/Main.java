@@ -644,7 +644,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
 			}
 		}
-		lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
+		if (!lstMultipleSeqsAlign.isEmpty()) {
+			lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
+		}
 		btnStartProcess.setDisable(false);
 		
 		contentInit = new StringBuilder();
@@ -800,7 +802,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			} catch (Exception e) {
 				// do nothing
 			}
-			if (count > lines) {
+			if (count >= lines) {
 				count = 0;
 				lstPartsSeq.add(stringBuilder.toString());
 				stringBuilder = new StringBuilder();
@@ -811,7 +813,9 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		if (index < lstPartsSeq.size()) {
 			lstMultipleSeqsAlign.add(lstPartsSeq.get(index));
 		}
-		lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
+		if (!lstMultipleSeqsAlign.isEmpty()) {
+			lstTargetSeqAlign.add(lstMultipleSeqsAlign.get(0));
+		}
 		fr.close();
 		br.close();
 	}
@@ -1384,7 +1388,11 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				Thread t = new Thread(task);
 				t.setDaemon(true);
 				t.start();
-    		}
+    		} else {
+        		contentInit.append("Fim");
+        		contentInit.append("<br/>-<br/>");
+        		showContentInit();
+        	}
     	}
  	}
     
@@ -1501,7 +1509,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
     
     private void buildHeader(StringBuilder comparationsAlign) {
     	int biggestSize = 1;
-    	if (radioPairwiseAlignment.isSelected()) {
+    	if (radioPairwiseAlignment.isSelected() && doAlignment) {
     		if (lstTargetSeqAlign != null && !lstTargetSeqAlign.isEmpty() 
 	 				&& lstAnotherSeqsAlign != null && !lstAnotherSeqsAlign.isEmpty()) {
     			
@@ -1823,7 +1831,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			// == Primeiro pega da map apenas as diferenças que interessam, pois só interessam as diferenças presentes em uma mesma região que possui diferença em todas as sequencias não alvo
 			Map<Integer, DesignOligo> mapDiffsPositionsValid = new HashMap<>();
 			for (Entry<Integer, DesignOligo> entry : mapDiffsPositions.entrySet()) {
-				int qtySequences = compareSecondaryTargets && listSecondaryTargetSequences != null ? listSequences.size() + listSecondaryTargetSequences.size() : listSequences != null ? listSequences.size() : lstMultipleSeqsAlign.size();
+				int qtySequences = compareSecondaryTargets && listSecondaryTargetSequences != null ? listSequences.size() + listSecondaryTargetSequences.size() : listSequences != null ? listSequences.size() : lstMultipleSeqsAlign.size()-1;
 				if (entry.getValue().getMapDiffDesignOligo().size() == qtySequences-1) {
 					mapDiffsPositionsValid.put(entry.getKey(), entry.getValue());
 				}
