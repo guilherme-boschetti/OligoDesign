@@ -3,6 +3,7 @@ import sun.misc.Cleaner;
 import sun.nio.ch.DirectBuffer;
  
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
@@ -14,13 +15,15 @@ import java.util.List;
 
 public class LargeMatrix implements Closeable {
     private static final int MAPPING_SIZE = 1 << 30;
+    private final File file;
     private final RandomAccessFile raf;
     private final int width;
     private final int height;
     private final List<MappedByteBuffer> mappings = new ArrayList<>();
  
     public LargeMatrix(String filename, int width, int height) throws IOException {
-        this.raf = new RandomAccessFile(filename, "rw");
+    	this.file = new File(filename);
+        this.raf = new RandomAccessFile(file, "rw");
         try {
             this.width = width;
             this.height = height;
@@ -31,7 +34,14 @@ public class LargeMatrix implements Closeable {
             }
         } catch (IOException e) {
             raf.close();
+            file.delete();
+            if (file.exists()) {
+            	file.deleteOnExit();
+            }
             throw e;
+        }
+        if (file.exists()) {
+        	file.deleteOnExit();
         }
     }
  
@@ -69,6 +79,10 @@ public class LargeMatrix implements Closeable {
         for (MappedByteBuffer mapping : mappings)
             clean(mapping);
         raf.close();
+        file.delete();
+        if (file.exists()) {
+        	file.deleteOnExit();
+        }
     }
  
     private void clean(MappedByteBuffer mapping) {
