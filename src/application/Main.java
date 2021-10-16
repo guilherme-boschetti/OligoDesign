@@ -32,8 +32,6 @@ import application.utils.diff_match_patch;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -48,20 +46,17 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.RadioButton;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
 
 //import name.fraser.neil.plaintext.diff_match_patch;
@@ -75,12 +70,16 @@ import javafx.scene.web.WebView;
 //https://stackoverflow.com/questions/10231544/runnable-jar-not-working-with-referenced-libraries
 //==
 
-public class Main extends Application implements FastaFromWeb.IFastaNames {
+public class Main extends Application implements FastaFromWeb.IFastaNames, IParametersConfigurations {
 	
 	// ========== FXML attributes ========== ---------- ---------- ---------- ----------
 	
 	@FXML
     private MenuItem menuFastaWeb;
+	@FXML
+    private MenuItem menuDesignParams;
+	@FXML
+    private MenuItem menuAlignmentConfigs;
 	@FXML
     private MenuItem menuAbout;
     @FXML
@@ -102,19 +101,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	@FXML
 	private TextField txtLines;
 	@FXML
-	private ComboBox<OligoSize> cmbOligoSize;
-	@FXML
-    private CheckBox chkCompareSecondaryTargets;
-	@FXML
-    private CheckBox chkDoAlignment;
-	@FXML
-    private CheckBox chkUseBiojava;
-	@FXML
-    private ToggleGroup groupAlignment;
-	@FXML
-    private RadioButton radioPairwiseAlignment;
-    @FXML
-    private RadioButton radioMultipleAlignment;
+	private Label lblConfigs;
     @FXML
     private Label lblOligosRegions;
 	@FXML
@@ -129,11 +116,17 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	private WebView wvResult;
 	@FXML
 	private ProgressIndicator progressInit;
+	@FXML
+	private VBox vboxLines;
+	@FXML
+	private VBox vboxNext;
 	
 	// ========== attributes ========== ---------- ---------- ---------- ----------
 	
 	private Stage stage;
 	private Stage stageFastWeb;
+	private Stage stageDesignParams;
+	private Stage stageAlignmentConfigs;
 	
 	private String targetSequence;
 	private List<String> listSequences;
@@ -157,6 +150,14 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	private String messageToDisplayInLblOligosRegions;
 	
 	private int oligoSize = 20;
+	private int ampliconSize = 150;
+	private int maxConsecutiveNucleotides = 5;
+	private int minTM = 55;
+	private int maxTM = 62;
+	private int minPercentCG = 30;
+	private int maxPercentCG = 70;
+	
+	String configs;
 	
 	private DecimalFormat decimalFormat;
 	
@@ -166,10 +167,16 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 	
 	private boolean doAlignment;
 	private boolean useBiojava;
+	
+	private int alignmentType;
+	
 	private boolean showMessageBigSequence;
 	private boolean storeMatrixInFile;
 	
 	// ========== constants ========== ---------- ---------- ---------- ----------
+	
+	private static int ALIGNMENT_TYPE_PAIR = 0;
+	private static int ALIGNMENT_TYPE_MULTIPLE = 1;
 	
 	private static String HTML_STYLE = "<style> body { font-family: 'Courier New', monospace; white-space: nowrap; } </style>";
 	private static String HTML_COLOR_BLUE = "#ccccff";
@@ -214,18 +221,188 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		contentInit.append(HTML_STYLE);
 		
 		decimalFormat = new DecimalFormat();
-		
-		doAlignment = true;
-		
-		chkDoAlignment.setSelected(true);
-		useBiojava = true;
-	    chkUseBiojava.setSelected(true);
+	    
+		loadConfigurations();
 		
 		setMenusIcons();
-		loadComboBoxOligoSize();
 		enableOnlyFirstTab();
 		bindWebViewsScrollBarValues();
 		setTextFieldListener();
+	}
+	
+	public void loadConfigurations() {
+		configs = "Configurações do OligoDesign:\n\n";
+		
+	    loadDesignParams();
+	    loadAlignmentConfigs();
+	    
+	    lblConfigs.setText(configs);
+	}
+	
+	private void loadDesignParams() {
+		if (stageDesignParams != null) {
+			stageDesignParams.close();
+   		}
+		File dir = new File("C:/OligoDesign");
+		if (!dir.exists()) {
+			dir.mkdir();
+		}
+		File config = new File("C:/OligoDesign/DesignParams.txt");
+		if (!config.exists()) {
+
+			String line1 = "Comprimento dos Oligonucleotídeos = 20";
+			String line2 = "Tamanho máximo do Amplicon = 150";
+			String line3 = "Número máximo de nucleotídeos consecutivos = 5";
+			String line4 = "Temperatura de melting mínima = 55";
+			String line5 = "Temperatura de melting máxima = 62";
+			String line6 = "Porcentagem de CG mínima = 30";
+			String line7 = "Porcentagem de CG máxima = 70";
+			// Proporção entre GC e AT mais ou menos 50%, sonda pode ter mais GC que primer, pois tem que ter temperatura maior.
+			// Temperatura de melting da sonda tem que ficar aproximadamente 10 graus a mais que dos primers.
+			List<String> lines = new ArrayList<>();
+			lines.add(line1);
+			lines.add(line2);
+			lines.add(line3);
+			lines.add(line4);
+			lines.add(line5);
+			lines.add(line6);
+			lines.add(line7);
+			
+			writeFile("C:/OligoDesign", "DesignParams", "txt", lines);
+			
+			config = new File("C:/OligoDesign/DesignParams.txt");
+		}
+		if (!config.exists()) {
+			oligoSize = 20;
+			ampliconSize = 150;
+			maxConsecutiveNucleotides = 5;
+			minTM = 55;
+			maxTM = 62;
+			minPercentCG = 30;
+			maxPercentCG = 70;
+		} else {
+			try {
+				List<String> lines = new ArrayList<>();
+		    	FileReader fr = new FileReader(config);
+		    	BufferedReader br = new BufferedReader(fr);
+		    	
+		    	StringBuilder sb = new StringBuilder();
+		    	
+				String line = br.readLine();
+				while (line != null) {
+					lines.add(line);
+					sb.append(line + "\n");
+					line = br.readLine();
+				}
+				fr.close();
+				br.close();
+				
+				configs += sb.toString();
+
+				Object[] params = lines.toArray();
+				
+				oligoSize = Integer.valueOf(((String)params[0]).split(" = ")[1]);
+				ampliconSize = Integer.valueOf(((String)params[1]).split(" = ")[1]);
+				maxConsecutiveNucleotides = Integer.valueOf(((String)params[2]).split(" = ")[1]);
+				minTM = Integer.valueOf(((String)params[3]).split(" = ")[1]);
+				maxTM = Integer.valueOf(((String)params[4]).split(" = ")[1]);
+				minPercentCG = Integer.valueOf(((String)params[5]).split(" = ")[1]);
+				maxPercentCG = Integer.valueOf(((String)params[6]).split(" = ")[1]);
+				
+			} catch (Exception e) {
+				oligoSize = 20;
+				ampliconSize = 150;
+				maxConsecutiveNucleotides = 5;
+				minTM = 55;
+				maxTM = 62;
+				minPercentCG = 30;
+				maxPercentCG = 70;
+			}
+		}
+	}
+	
+	private void loadAlignmentConfigs() {
+		if (stageAlignmentConfigs != null) {
+			stageAlignmentConfigs.close();
+   		}
+		File dir = new File("C:/OligoDesign");
+		if (!dir.exists()) {
+			dir.mkdir();
+		}
+		File config = new File("C:/OligoDesign/AlignmentConfigs.txt");
+		if (!config.exists()) {
+			
+			String line1 = "Fazer Alinhamento (0 - Não; 1 - Sim) = 1";
+			String line2 = "Usar BioJava (0 - Não; 1 - Sim) = 1";
+			String line3 = "Tipo de Alinhamento (0 - Alinhamento em pares; 1 - Alinhamento Múltiplo) = 0";
+			String line4 = "Considerar sequência(s) alvo secundária(s) para o desenho (0 - Não; 1 - Sim) = 0";
+			List<String> lines = new ArrayList<>();
+			lines.add(line1);
+			lines.add(line2);
+			lines.add(line3);
+			lines.add(line4);
+			
+			writeFile("C:/OligoDesign", "AlignmentConfigs", "txt", lines);
+			
+			config = new File("C:/OligoDesign/AlignmentConfigs.txt");
+		}
+		if (!config.exists()) {
+			doAlignment = true;
+			useBiojava = true;
+			alignmentType = 0;
+			compareSecondaryTargets = false;
+		} else {
+			try {
+				List<String> lines = new ArrayList<>();
+		    	FileReader fr = new FileReader(config);
+		    	BufferedReader br = new BufferedReader(fr);
+		    	
+		    	StringBuilder sb = new StringBuilder();
+		    	
+				String line = br.readLine();
+				while (line != null) {
+					lines.add(line);
+					sb.append(line + "\n");
+					line = br.readLine();
+				}
+				fr.close();
+				br.close();
+				
+				configs += sb.toString();
+
+				Object[] params = lines.toArray();
+				
+				doAlignment = Integer.valueOf(((String)params[0]).split(" = ")[1]) == 1;
+				useBiojava = Integer.valueOf(((String)params[1]).split(" = ")[1]) == 1;
+				alignmentType = Integer.valueOf(((String)params[2]).split(" = ")[1]);
+				compareSecondaryTargets = Integer.valueOf(((String)params[3]).split(" = ")[1]) == 1;
+				
+			} catch (Exception e) {
+				doAlignment = true;
+				useBiojava = true;
+				alignmentType = 0;
+				compareSecondaryTargets = false;
+			}
+		}
+		if (doAlignment) {
+			vboxLines.setVisible(false);
+			vboxNext.setVisible(false);
+    	    btnTarget.setDisable(false);
+    		btnTargetsSecondary.setDisable(false);
+    	    btnLoadSequencesAligned.setDisable(true);
+    	    txtLines.setDisable(true);
+    	    txtLines.setEditable(false);
+    	    btnNextPart.setDisable(true);
+    	} else {
+    		vboxLines.setVisible(true);
+			vboxNext.setVisible(true);
+    	    btnTarget.setDisable(true);
+    		btnTargetsSecondary.setDisable(true);
+    	    btnLoadSequencesAligned.setDisable(false);
+    	    txtLines.setDisable(false);
+    	    txtLines.setEditable(true);
+    	    btnNextPart.setDisable(true);
+    	}
 	}
 	
 	private void setMenusIcons() {
@@ -238,56 +415,6 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		imageViewHelp.setPreserveRatio(true);
 		menuAbout.setGraphic(imageViewAbout);
 		menuHelp.setGraphic(imageViewHelp);
-	}
-	
-	private void loadComboBoxOligoSize() {
-		loadComboBoxOligoSizeOptions();
-		setComboboxEventChangeListener();
-		setComboBoxOligoSizeDefaultOption();
-	}
-	
-	private void loadComboBoxOligoSizeOptions() {
-		ObservableList<OligoSize> lstOligoSize = FXCollections.observableArrayList();
-		for (int i=15; i<=30; i++) {
-			lstOligoSize.add(new OligoSize(i, i + " nucleotídeos"));
-		}
-		cmbOligoSize.setItems(lstOligoSize);
-	}
-	
-	private void setComboBoxOligoSizeDefaultOption() {
-		int indexOligoSize = 5;
-		cmbOligoSize.getSelectionModel().select(indexOligoSize);
-		//cmbOligoSize.setValue(new OligoSize(oligoSize, oligoSize + " nucleotídeos"));
-	}
-	
-	private void setComboboxEventChangeListener() {
-		cmbOligoSize.valueProperty().addListener(new ChangeListener<OligoSize>() {
-			@Override
-			public void changed(ObservableValue<? extends OligoSize> observable, OligoSize oldValue, OligoSize newValue) {
-				if (newValue != null) {
-					oligoSize = newValue.getSize();
-				}
-			}
-		});
-	}
-	
-	private class OligoSize {
-		private int size;
-		private String sizeDescription;
-		
-		public OligoSize(int size, String sizeDescription) {
-			this.size = size;
-			this.sizeDescription = sizeDescription;
-		}
-		
-		@Override
-		public String toString() {
-			return sizeDescription;
-		}
-
-		public int getSize() {
-			return size;
-		}
 	}
 	
 	private boolean alignmentComparationScroll = false;
@@ -491,6 +618,60 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
     }
 	
 	@FXML
+    void openDesignParams(ActionEvent event) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("DesignParams.fxml"));
+			Parent root = loader.load();
+			
+			DesignParams designParams = loader.getController();
+			if (designParams != null) {
+				designParams.setIParametersConfigurations(this);
+			}
+			
+			Scene scene = new Scene(root);
+			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+			stageDesignParams = new Stage();
+			stageDesignParams.setScene(scene);
+			stageDesignParams.setTitle("Parâmetros de desenho OligoDesign");
+	        try {
+	        	stageDesignParams.getIcons().add(new Image(getClass().getClassLoader().getResource("iconOligoDesign.png").toString()));
+			} catch (Exception exept) {
+				// do nothing
+			}
+	        stageDesignParams.show();
+		} catch (Exception e) {
+			showAlertCantOpenWindow("Parâmetros de desenho", e.getMessage());
+		}
+    }
+	
+	@FXML
+    void openAlignmentConfigs(ActionEvent event) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("AlignmentConfigs.fxml"));
+			Parent root = loader.load();
+			
+			AlignmentConfigs alignmentConfigs = loader.getController();
+			if (alignmentConfigs != null) {
+				alignmentConfigs.setIParametersConfigurations(this);
+			}
+			
+			Scene scene = new Scene(root);
+			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+			stageAlignmentConfigs = new Stage();
+			stageAlignmentConfigs.setScene(scene);
+			stageAlignmentConfigs.setTitle("Configurações de alinhamento OligoDesign");
+	        try {
+	        	stageAlignmentConfigs.getIcons().add(new Image(getClass().getClassLoader().getResource("iconOligoDesign.png").toString()));
+			} catch (Exception exept) {
+				// do nothing
+			}
+	        stageAlignmentConfigs.show();
+		} catch (Exception e) {
+			showAlertCantOpenWindow("Configurações de alinhamento", e.getMessage());
+		}
+    }
+	
+	@FXML
     void openAbout(ActionEvent event) {
 		try {
 			//Parent root = FXMLLoader.load(getClass().getResource("About.fxml"));
@@ -547,57 +728,6 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 			showAlertCantOpenWindow("Ajuda", e.getMessage());
 		}
     }
-    
-    // ========== screen checkbox event ========== ---------- ---------- ---------- ----------
-    
-    @FXML
-    void onCheckChange(ActionEvent event) {
-    	if (event.getSource() instanceof CheckBox) {
-            CheckBox chk = (CheckBox) event.getSource();
-            if ("Considerar sequência(s) alvo secundária(s)".equals(chk.getText())) {
-            	compareSecondaryTargets = chkCompareSecondaryTargets.isSelected();
-            } else if ("Usar Biojava".equals(chk.getText())) {
-            	useBiojava = chkUseBiojava.isSelected();
-            	if (useBiojava) {
-            		radioPairwiseAlignment.setDisable(false);
-            	    radioMultipleAlignment.setDisable(false);
-            	} else {
-            		radioPairwiseAlignment.setDisable(true);
-            	    radioMultipleAlignment.setDisable(true);
-            	}
-            } else if ("Fazer Alinhamento".equals(chk.getText())) {
-            	doAlignment = chkDoAlignment.isSelected();
-            	if (doAlignment) {
-            		chkUseBiojava.setDisable(false);
-            		radioPairwiseAlignment.setDisable(false);
-            	    radioMultipleAlignment.setDisable(false);
-            	    btnTarget.setDisable(false);
-            		btnTargetsSecondary.setDisable(false);
-            	    btnLoadSequencesAligned.setDisable(true);
-            	    txtLines.setDisable(true);
-            	    txtLines.setEditable(false);
-            	    btnNextPart.setDisable(true);
-            	} else {
-            		chkUseBiojava.setDisable(true);
-            		radioPairwiseAlignment.setDisable(true);
-            	    radioMultipleAlignment.setDisable(true);
-            	    btnTarget.setDisable(true);
-            		btnTargetsSecondary.setDisable(true);
-            	    btnLoadSequencesAligned.setDisable(false);
-            	    txtLines.setDisable(false);
-            	    txtLines.setEditable(true);
-            	    btnNextPart.setDisable(true);
-            	}
-            }
-        }
-    }
-    
-    /*chkCompareSecondaryTargets.selectedProperty().addListener(new ChangeListener<Boolean>() {
-        @Override
-        public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-        	System.out.println("Novo valor: " + newValue);
-        }
-    });*/
 	
 	// ========== screen buttons events ========== ---------- ---------- ---------- ----------
 	
@@ -672,12 +802,6 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		btnNextPart.setDisable(true);
 		btnStartProcess.setDisable(true);
 		btnClearAndRestart.setDisable(true);
-		cmbOligoSize.setDisable(true);
-		radioPairwiseAlignment.setDisable(true);
-	    radioMultipleAlignment.setDisable(true);
-	    chkCompareSecondaryTargets.setDisable(true);
-	    chkUseBiojava.setDisable(true);
-	    chkDoAlignment.setDisable(true);
 	}
 	
     @FXML
@@ -713,17 +837,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		btnNextPart.setDisable(true);
 		btnStartProcess.setDisable(true);
 		btnClearAndRestart.setDisable(true);
-		cmbOligoSize.setDisable(false);
-		radioPairwiseAlignment.setDisable(false);
-	    radioMultipleAlignment.setDisable(false);
-	    chkCompareSecondaryTargets.setDisable(false);
-	    chkUseBiojava.setDisable(false);
-	    chkDoAlignment.setDisable(false);
 	    
-	    chkDoAlignment.setSelected(true);
-	    radioPairwiseAlignment.setSelected(true);
-	    chkCompareSecondaryTargets.setSelected(false);
-	    chkUseBiojava.setSelected(true);
 	    lblOligosRegions.setText("");
 		
 		wvInit.getEngine().loadContent("");
@@ -1055,7 +1169,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		
 		lstTargetSeqAlign = new LinkedList<>();
 		lstAnotherSeqsAlign = new LinkedList<>();
-		if (radioMultipleAlignment.isSelected()) {
+		if (alignmentType == ALIGNMENT_TYPE_MULTIPLE) {
 			lstMultipleSeqsAlign = new LinkedList<>();
 		}
 		
@@ -1071,7 +1185,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				long startTime = System.currentTimeMillis();
 				
 				if (useBiojava) {
-					if (radioPairwiseAlignment.isSelected()) {
+					if (alignmentType == ALIGNMENT_TYPE_PAIR) {
 						
 						for (String seq : listSequences) {
 							String[] alignResult = AlignUtil.pairwiseAlignment(targetSequence, seq);
@@ -1210,7 +1324,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
     	StringBuilder comparationsAlign = new StringBuilder();
 		comparationsAlign.append(HTML_STYLE);
 		
-    	if (radioPairwiseAlignment.isSelected() && doAlignment) {
+    	if (alignmentType == ALIGNMENT_TYPE_PAIR && doAlignment) {
 	 		if (lstTargetSeqAlign != null && !lstTargetSeqAlign.isEmpty() 
 	 				&& lstAnotherSeqsAlign != null && !lstAnotherSeqsAlign.isEmpty()) {
 	 			
@@ -1503,13 +1617,82 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				}
 			}
 		}
+		//--
+		int[] spacesTargetSeqAlign = new int[lstTargetSeqAlign.size()];
+		for (int i=0; i<lstTargetSeqAlign.size(); i++) {
+			String targetSeqAligned = lstTargetSeqAlign.get(i);
+			int countSpaces = 0;
+			for (int j=0; j<targetSeqAligned.length(); j++) {
+	  			char c = targetSeqAligned.charAt(j);
+	  			if (c == '-') {
+	  				countSpaces++;
+	  			} else {
+	  				break;
+	  			}
+	  		}
+			spacesTargetSeqAlign[i] = countSpaces;
+		}
+		List<Integer> spacesSecondaryTargetSequences = new ArrayList<>();
+		if (listSecondaryTargetSequences != null) {
+			for (int i=0; i<lstTargetSeqAlignSecondary.size(); i++) {
+				String targetSeqAligned = lstTargetSeqAlignSecondary.get(i);
+				int countSpaces = 0;
+				for (int j=0; j<targetSeqAligned.length(); j++) {
+		  			char c = targetSeqAligned.charAt(j);
+		  			if (c == '-') {
+		  				countSpaces++;
+		  			} else {
+		  				break;
+		  			}
+		  		}
+				spacesSecondaryTargetSequences.add(countSpaces);
+			}
+		}
+		//--
+		int smallest = spacesTargetSeqAlign[0];
+		for (int space : spacesTargetSeqAlign) {
+			if (space < smallest)
+				smallest = space;
+		}
+		if (listSecondaryTargetSequences != null) {
+			for (int space : spacesSecondaryTargetSequences) {
+				if (space < smallest)
+					smallest = space;
+			}
+		}
+		//--
+		for (int i=0; i<lstTargetSeqAlign.size(); i++) {
+			String targetSeqAligned = lstTargetSeqAlign.get(i);
+			targetSeqAligned = targetSeqAligned.substring(smallest, targetSeqAligned.length());
+			lstTargetSeqAlign.remove(i);
+			lstTargetSeqAlign.add(i, targetSeqAligned);
+			
+			String anotherSeqAligned = lstAnotherSeqsAlign.get(i);
+			anotherSeqAligned = anotherSeqAligned.substring(smallest, anotherSeqAligned.length());
+			lstAnotherSeqsAlign.remove(i);
+			lstAnotherSeqsAlign.add(i, anotherSeqAligned);
+		}
+		if (listSecondaryTargetSequences != null) {
+			for (int i=0; i<lstTargetSeqAlignSecondary.size(); i++) {
+				String targetSeqAligned = lstTargetSeqAlignSecondary.get(i);
+				targetSeqAligned = targetSeqAligned.substring(smallest, targetSeqAligned.length());
+				lstTargetSeqAlignSecondary.remove(i);
+				lstTargetSeqAlignSecondary.add(i, targetSeqAligned);
+					
+				String anotherSeqAligned = lstAnotherSeqsAlignSecondary.get(i);
+				anotherSeqAligned = anotherSeqAligned.substring(smallest, anotherSeqAligned.length());
+				lstAnotherSeqsAlignSecondary.remove(i);
+				lstAnotherSeqsAlignSecondary.add(i, anotherSeqAligned);
+				
+			}
+		}
     }
     
     // ========== Monta o header com a "régua" indicando o tamanho das sequencias alinhadas ========== ---------- ---------- ---------- ----------
     
     private void buildHeader(StringBuilder comparationsAlign) {
     	int biggestSize = 1;
-    	if (radioPairwiseAlignment.isSelected() && doAlignment) {
+    	if (alignmentType == ALIGNMENT_TYPE_PAIR && doAlignment) {
     		if (lstTargetSeqAlign != null && !lstTargetSeqAlign.isEmpty() 
 	 				&& lstAnotherSeqsAlign != null && !lstAnotherSeqsAlign.isEmpty()) {
     			
@@ -1847,7 +2030,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				// == Depois pega os 3 primeiros itens, se tiver 3, que são os que devem servir de molde para o desenho dos oligos
 				//result.append("-<br/>Regioes<br/>-<br/>"); // -- == -- só pra ver (debug)
 				int sizeMapSorted = mapSorted.size();
-				int qtyOligosToDesign = sizeMapSorted >= 3 ? 3 : sizeMapSorted;
+				int qtyOligosToDesign = /*sizeMapSorted >= 3 ? 3 :*/ sizeMapSorted;
 				int i = 0;
 				List<DesignOligo> lstRegionsToDesignOligo = new ArrayList<>();
 				int repeat = sizeMapSorted;
@@ -1898,66 +2081,213 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				
 				// == Depois obtém o molde dos oligonucleotídeos
 				if (!lstRegionsToDesignOligo.isEmpty()) {
-					// ordena a lista por firstDiffStartPosition em ordem crescente
-					Collections.sort(lstRegionsToDesignOligo, new Comparator<DesignOligo>() {
-			            @Override
-			            public int compare(DesignOligo o1, DesignOligo o2) {
-			            	return Integer.valueOf(o1.getFirstDiffStartPosition()).compareTo(o2.getFirstDiffStartPosition());
-			            }
-			        });
-					String targetSeqAligned = lstTargetSeqAlign.get(0);
-					int forwardPrimerStartPos = lstRegionsToDesignOligo.get(0).getFirstDiffStartPosition() - 1;
-					int forwardPrimerEndPos = forwardPrimerStartPos + oligoSize;
-					String forwardPrimerRegion = targetSeqAligned.substring(forwardPrimerStartPos, forwardPrimerStartPos + oligoSize);
-					while (forwardPrimerRegion.contains("-")) {
-						int countSpaces = ((int)forwardPrimerRegion.chars().filter(ch -> ch == '-').count());
-						forwardPrimerRegion = forwardPrimerRegion.replaceAll("-", "");
-						String complement = targetSeqAligned.substring(forwardPrimerStartPos + oligoSize, forwardPrimerStartPos + oligoSize + countSpaces);
-						if (!complement.contains("-")) {
-							forwardPrimerRegion += complement;
-							forwardPrimerEndPos += countSpaces;
-						}
-					}
+					
+					String forwardPrimerRegion = "";
 					String probeRegion = "";
 					String reversePrimerRegion = "";
-					String forwardPrimerStartPosition = "" + (forwardPrimerStartPos + 1);
+					String forwardPrimerStartPosition = "";
 					String probeStartPosition = "";
 					String reversePrimerStartPosition = "";
-					String forwardPrimerEndPosition = "" + forwardPrimerEndPos;
+					String forwardPrimerEndPosition = "";
 					String probeEndPosition = "";
 					String reversePrimerEndPosition = "";
-					int lstRegionsToDesignOligoSize = lstRegionsToDesignOligo.size();
-					if (lstRegionsToDesignOligoSize >= 2) {
-						int probeStartPos = lstRegionsToDesignOligo.get(1).getFirstDiffStartPosition() - 1;
-						int probeEndPos = probeStartPos + oligoSize;
-						probeStartPosition += probeStartPos + 1;
-						probeRegion = targetSeqAligned.substring(probeStartPos, probeStartPos + oligoSize);
-						while (probeRegion.contains("-")) {
-							int countSpaces = ((int)probeRegion.chars().filter(ch -> ch == '-').count());
-							probeRegion = probeRegion.replaceAll("-", "");
-							String complement = targetSeqAligned.substring(probeStartPos + oligoSize, probeStartPos + oligoSize + countSpaces);
+					
+					int indexToGetOligo = 0;
+					while (indexToGetOligo < lstRegionsToDesignOligo.size()) {
+						
+						// ordena a lista por firstDiffStartPosition em ordem crescente
+						Collections.sort(lstRegionsToDesignOligo, new Comparator<DesignOligo>() {
+				            @Override
+				            public int compare(DesignOligo o1, DesignOligo o2) {
+				            	return Integer.valueOf(o1.getFirstDiffStartPosition()).compareTo(o2.getFirstDiffStartPosition());
+				            }
+				        });
+						String targetSeqAligned = lstTargetSeqAlign.get(0);
+						int forwardPrimerStartPos = lstRegionsToDesignOligo.get(indexToGetOligo).getFirstDiffStartPosition() - 1;
+						int forwardPrimerEndPos = forwardPrimerStartPos + oligoSize;
+						forwardPrimerRegion = targetSeqAligned.substring(forwardPrimerStartPos, forwardPrimerStartPos + oligoSize);
+						while (forwardPrimerRegion.contains("-")) {
+							int countSpaces = ((int)forwardPrimerRegion.chars().filter(ch -> ch == '-').count());
+							forwardPrimerRegion = forwardPrimerRegion.replaceAll("-", "");
+							String complement = targetSeqAligned.substring(forwardPrimerStartPos + oligoSize, forwardPrimerStartPos + oligoSize + countSpaces);
 							if (!complement.contains("-")) {
-								probeRegion += complement;
-								probeEndPos += countSpaces;
+								forwardPrimerRegion += complement;
+								forwardPrimerEndPos += countSpaces;
 							}
 						}
-						probeEndPosition += probeEndPos;
-					}
-					if (lstRegionsToDesignOligoSize >= 3) {
-						int reversePrimerStartPos = lstRegionsToDesignOligo.get(2).getFirstDiffStartPosition() - 1;
-						int reversePrimerEndPos = reversePrimerStartPos + oligoSize;
-						reversePrimerStartPosition += reversePrimerStartPos + 1;
-						reversePrimerRegion = targetSeqAligned.substring(reversePrimerStartPos, reversePrimerStartPos + oligoSize);
-						while (reversePrimerRegion.contains("-")) {
-							int countSpaces = ((int)reversePrimerRegion.chars().filter(ch -> ch == '-').count());
-							reversePrimerRegion = reversePrimerRegion.replaceAll("-", "");
-							String complement = targetSeqAligned.substring(reversePrimerStartPos + oligoSize, reversePrimerStartPos + oligoSize + countSpaces);
-							if (!complement.contains("-")) {
-								reversePrimerRegion += complement;
-								reversePrimerEndPos += countSpaces;
+						
+						// Valida temperatura de melting
+						int forwardPrimerTM = calculateTM(forwardPrimerRegion);
+						if (forwardPrimerTM > maxTM) {
+							while (forwardPrimerTM > maxTM) {
+								forwardPrimerEndPos = forwardPrimerEndPos - 1;
+								forwardPrimerRegion = forwardPrimerRegion.substring(0, forwardPrimerRegion.length()-2);
+								forwardPrimerTM = calculateTM(forwardPrimerRegion);
+							}
+						} else if (forwardPrimerTM < minTM) {
+							while (forwardPrimerTM < minTM) {
+								forwardPrimerEndPos = forwardPrimerEndPos + 1;
+								forwardPrimerRegion = targetSeqAligned.substring(forwardPrimerStartPos, forwardPrimerEndPos);
+								forwardPrimerTM = calculateTM(forwardPrimerRegion);
 							}
 						}
-						reversePrimerEndPosition += reversePrimerEndPos;
+						
+						// Valida maxConsecutiveNucleotides
+						if (haveMoreThanMaxConsecutiveNucleotides(forwardPrimerRegion)) {
+							indexToGetOligo ++;
+							
+							forwardPrimerStartPos = 0;
+							forwardPrimerEndPos = 0;
+							forwardPrimerStartPosition = "";
+							forwardPrimerEndPosition = "";
+							forwardPrimerRegion = "";
+							
+							continue;
+						}
+						
+						// Valida percentCG
+						if (!validPercentCG(forwardPrimerRegion)) {
+							indexToGetOligo ++;
+							
+							forwardPrimerStartPos = 0;
+							forwardPrimerEndPos = 0;
+							forwardPrimerStartPosition = "";
+							forwardPrimerEndPosition = "";
+							forwardPrimerRegion = "";
+							
+							continue;
+						}
+						
+						forwardPrimerStartPosition = "" + (forwardPrimerStartPos + 1);
+						forwardPrimerEndPosition = "" + forwardPrimerEndPos;
+						
+						indexToGetOligo ++;
+	
+						while (indexToGetOligo < lstRegionsToDesignOligo.size()) {
+							int probeStartPos = lstRegionsToDesignOligo.get(indexToGetOligo).getFirstDiffStartPosition() - 1;
+							int probeEndPos = probeStartPos + oligoSize;
+							if (probeEndPos - forwardPrimerStartPos <= ampliconSize) { // Valida tamanho amplicon
+								probeStartPosition += probeStartPos + 1;
+								probeRegion = targetSeqAligned.substring(probeStartPos, probeStartPos + oligoSize);
+								while (probeRegion.contains("-")) {
+									int countSpaces = ((int)probeRegion.chars().filter(ch -> ch == '-').count());
+									probeRegion = probeRegion.replaceAll("-", "");
+									String complement = targetSeqAligned.substring(probeStartPos + oligoSize, probeStartPos + oligoSize + countSpaces);
+									if (!complement.contains("-")) {
+										probeRegion += complement;
+										probeEndPos += countSpaces;
+									}
+								}
+								probeEndPosition += probeEndPos;
+								
+								// Valida temperatura de melting
+								int probeTM = calculateTM(probeRegion);
+								while (probeTM <= forwardPrimerTM) {
+									probeEndPos = probeEndPos + 1;
+									probeRegion = targetSeqAligned.substring(probeStartPos, probeEndPos);
+									probeTM = calculateTM(probeRegion);
+								}
+								
+								// Valida maxConsecutiveNucleotides
+								if (haveMoreThanMaxConsecutiveNucleotides(probeRegion)) {
+									indexToGetOligo ++;
+									
+									probeStartPos = 0;
+									probeEndPos = 0;
+									probeStartPosition = "";
+									probeEndPosition = "";
+									probeRegion = "";
+									
+									continue;
+								}
+								
+								// Valida percentCG
+								if (!validPercentCG(probeRegion)) {
+									indexToGetOligo ++;
+									
+									probeStartPos = 0;
+									probeEndPos = 0;
+									probeStartPosition = "";
+									probeEndPosition = "";
+									probeRegion = "";
+									
+									continue;
+								}
+							}
+							
+							break;
+						}
+						
+						indexToGetOligo ++;
+						
+						while (indexToGetOligo < lstRegionsToDesignOligo.size()) {
+							int reversePrimerStartPos = lstRegionsToDesignOligo.get(indexToGetOligo).getFirstDiffStartPosition() - 1;
+							int reversePrimerEndPos = reversePrimerStartPos + oligoSize;
+							if (reversePrimerEndPos - forwardPrimerStartPos <= ampliconSize) { // Valida tamanho amplicon
+								reversePrimerStartPosition += reversePrimerStartPos + 1;
+								reversePrimerRegion = targetSeqAligned.substring(reversePrimerStartPos, reversePrimerStartPos + oligoSize);
+								while (reversePrimerRegion.contains("-")) {
+									int countSpaces = ((int)reversePrimerRegion.chars().filter(ch -> ch == '-').count());
+									reversePrimerRegion = reversePrimerRegion.replaceAll("-", "");
+									String complement = targetSeqAligned.substring(reversePrimerStartPos + oligoSize, reversePrimerStartPos + oligoSize + countSpaces);
+									if (!complement.contains("-")) {
+										reversePrimerRegion += complement;
+										reversePrimerEndPos += countSpaces;
+									}
+								}
+								reversePrimerEndPosition += reversePrimerEndPos;
+								
+								// Valida temperatura de melting
+								int reversePrimerTM = calculateTM(reversePrimerRegion);
+								if (reversePrimerTM > maxTM) {
+									while (reversePrimerTM > maxTM) {
+										reversePrimerEndPos = reversePrimerEndPos - 1;
+										reversePrimerRegion = reversePrimerRegion.substring(0, reversePrimerRegion.length()-2);
+										reversePrimerTM = calculateTM(reversePrimerRegion);
+									}
+								} else if (reversePrimerTM < minTM) {
+									while (reversePrimerTM < minTM) {
+										reversePrimerEndPos = reversePrimerEndPos + 1;
+										reversePrimerRegion = targetSeqAligned.substring(reversePrimerStartPos, reversePrimerEndPos);
+										reversePrimerTM = calculateTM(reversePrimerRegion);
+									}
+								}
+								
+								// Valida maxConsecutiveNucleotides
+								if (haveMoreThanMaxConsecutiveNucleotides(reversePrimerRegion)) {
+									indexToGetOligo ++;
+									
+									reversePrimerStartPos = 0;
+									reversePrimerEndPos = 0;
+									reversePrimerStartPosition = "";
+									reversePrimerEndPosition = "";
+									reversePrimerRegion = "";
+									
+									continue;
+								}
+								
+								// Valida percentCG
+								if (!validPercentCG(reversePrimerRegion)) {
+									indexToGetOligo ++;
+									
+									reversePrimerStartPos = 0;
+									reversePrimerEndPos = 0;
+									reversePrimerStartPosition = "";
+									reversePrimerEndPosition = "";
+									reversePrimerRegion = "";
+									
+									continue;
+								}
+							}
+							
+							indexToGetOligo ++;
+							
+							break;
+						}
+						
+						indexToGetOligo ++;
+						
+						break;
 					}
 					result.append("-<br/>");
 					result.append("- ________________________ " + forwardPrimerStartPosition + " - " + forwardPrimerEndPosition);
@@ -2002,7 +2332,47 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 					result.append(probeRegion); // probe
 					result.append("<br/>-<br/>");
 					result.append(" - _ Primer Reverso: ");
-					result.append(reversePrimer);
+					result.append(reversePrimer); // reversePrimer
+					result.append("<br/>-<br/>");
+					// --
+					
+					result.append("<br/>-<br/>");
+					result.append(" - Temperaturas de Melting (TM):");
+					result.append("<br/>");
+					result.append(" - (4xCGs + 2xATs)");
+					result.append("<br/>-<br/>");
+					result.append(" - TM Primer 'Forward': ");
+					result.append(calculateTM(forwardPrimerRegion)); // TM forwardPrimer
+					result.append("<br/>-<br/>");
+					result.append(" - __________ TM Sonda: ");
+					result.append(calculateTM(probeRegion)); // TM probe
+					result.append("<br/>-<br/>");
+					result.append(" - _ TM Primer Reverso: ");
+					result.append(calculateTM(reversePrimer)); // TM reversePrimer
+					result.append("<br/>-<br/>");
+					// --
+					
+					float percCGForwardPrimerRegion = calculatePercCG(forwardPrimerRegion);
+					float percCGProbeRegion = calculatePercCG(probeRegion);
+					float percCGReversePrimerRegion = calculatePercCG(reversePrimer);
+					
+					result.append("<br/>-<br/>");
+					result.append(" - Porcentagens de CG e AT:");
+					result.append("<br/>-<br/>");
+					result.append(" - % CG Primer 'Forward': "); // % forwardPrimer
+					result.append(percCGForwardPrimerRegion);
+					result.append(" - % AT Primer 'Forward': ");
+					result.append(percCGForwardPrimerRegion > 0 ? 100 - percCGForwardPrimerRegion : 0.0);
+					result.append("<br/>-<br/>");
+					result.append(" - __________ % CG Sonda: "); // % probe
+					result.append(percCGProbeRegion);
+					result.append(" - __________ % AT Sonda: ");
+					result.append(percCGProbeRegion > 0 ? 100 - percCGProbeRegion : 0.0);
+					result.append("<br/>-<br/>");
+					result.append(" - _ % CG Primer Reverso: "); // % reversePrimer
+					result.append(percCGReversePrimerRegion);
+					result.append(" - _ % AT Primer Reverso: ");
+					result.append(percCGReversePrimerRegion > 0 ? 100 - percCGReversePrimerRegion : 0.0);
 					result.append("<br/>-<br/>");
 					// --
 					
@@ -2056,6 +2426,66 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 				break;
 		}
   		return ret;
+  	}
+  	
+  	private int calculateTM(String oligo) {
+  		// (4xCGs + 2xATs)
+  		int countC = 0;
+  		int countG = 0;
+  		int countA = 0;
+  		int countT = 0;
+  		for (int i=0; i<oligo.length(); i++) {
+  			char c = oligo.charAt(i);
+  			if (c == 'C' || c == 'c') {
+  				countC++;
+  			} else if (c == 'G' || c == 'g') {
+  				countG++;
+  			} else if (c == 'A' || c == 'a') {
+  				countA++;
+  			} else if (c == 'T' || c == 't') {
+  				countT++;
+  			}
+  		}
+  		int tm = 4 * (countC + countG) + 2 * (countA + countT);
+  		return tm;
+  	}
+  	
+  	private float calculatePercCG(String oligo) {
+  		int countC = 0;
+  		int countG = 0;
+  		for (int i=0; i<oligo.length(); i++) {
+  			char c = oligo.charAt(i);
+  			if (c == 'C' || c == 'c') {
+  				countC++;
+  			} else if (c == 'G' || c == 'g') {
+  				countG++;
+  			}
+  		}
+  		float percCG = 0;
+  		if (oligo.length() > 0)
+  			percCG = (countC + countG) * 100 / oligo.length();
+  		return percCG;
+  	}
+  	
+  	private boolean haveMoreThanMaxConsecutiveNucleotides(String oligo) {
+  		int maxConsecutive = 1;
+  		int consecutive = 1;
+  		for (int i=1; i<oligo.length(); i++) {
+  			char c1 = oligo.charAt(i-1);
+  			char c2 = oligo.charAt(i);
+  			if (c1 == c2)
+  				consecutive ++;
+  			else
+  				consecutive = 1;
+  			if (consecutive > maxConsecutive)
+  				maxConsecutive = consecutive;
+  		}
+  		return maxConsecutive > maxConsecutiveNucleotides;
+  	}
+  	
+  	private boolean validPercentCG(String oligo) {
+  		float percentCG = calculatePercCG(oligo);
+  		return percentCG <= maxPercentCG && percentCG >= minPercentCG;
   	}
   	
   	private Map<Integer, DesignOligo> mapDiffsPositions;
@@ -2273,7 +2703,7 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
    	        br.close();
    	        
    	        if (linesToWrite != null) {
-   	        	writeFile(directoryToSave, fastaName, linesToWrite);
+   	        	writeFile(directoryToSave, fastaName, "fasta", linesToWrite);
    	        }
    	        
 		} catch (MalformedURLException e) {
@@ -2291,11 +2721,11 @@ public class Main extends Application implements FastaFromWeb.IFastaNames {
 		}
    	}
    	
-   	private void writeFile(String directory, String fileName, List<String> lines) {
+   	public static void writeFile(String directory, String fileName, String extension, List<String> lines) {
    		FileWriter fw = null;
    		BufferedWriter bw = null;
    		try {
-	   		File file = new File(directory + "/" + fileName + ".fasta");
+	   		File file = new File(directory + "/" + fileName + "." + extension);
 	   		fw = new FileWriter(file);
 	   		bw = new BufferedWriter(fw);
 	   		for (String line : lines) {
